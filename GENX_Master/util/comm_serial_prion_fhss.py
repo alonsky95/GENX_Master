@@ -16,7 +16,7 @@ class FHSSPrionSerialComm(SerialComm):
 
 
     def communications_check(self):
-        """ Checks communicatino with NIC """
+        """ Checks communication with NIC """
         for tries in range(5):
             # try:
             self._write('aat', 100) #to overcome a bug in the UART code
@@ -153,6 +153,9 @@ class FHSSPrionSerialComm(SerialComm):
 
         self._write(command, character_delay_ms)
         return self.read(extra_read_time_ms=extra_read_time_ms)
-    
-dummy_log = DummyLogger()
-ser = FHSSPrionSerialComm(dummy_log, "Generic", "COM6")
+
+
+# unit-test
+if __name__ == '__main__':
+    dummy_log = DummyLogger()
+    ser = FHSSPrionSerialComm(dummy_log, "Generic", "COM6")

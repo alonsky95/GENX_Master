@@ -5,5 +5,29 @@ from abc import ABC, abstractmethod
 
 class PowerMeter(ABC):
     @abstractmethod
-    def read_power():
+    def set_cal_level(self, level):
+        pass
+    
+    @abstractmethod
+    def set_gates(self):
+        pass
+       
+    @abstractmethod
+    def set_frequency(self, freq):
+        pass
+
+    @abstractmethod
+    def read_peak_power_level(self):
+        pass
+
+    @abstractmethod
+    def read_average_power_level(self):
+        pass
+    
+    @abstractmethod
+    def read_outputpower(self,channel):
+        pass
+
+    @abstractmethod
+    def read_trigger_count(self):
         pass

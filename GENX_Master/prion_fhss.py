@@ -2,11 +2,11 @@
 # this encapsulates the FHSS commands to conform to the Nic interface
 
 from nic import Nic
-from comm_serial import SerialComm
+from GENX_Master.util.comm_serial_prion_fhss import FHSSPrionSerialComm
 
 class PrionFHSS(Nic):
-    def __init__(self, Comm):
-        pass
+    def __init__(self):
+        _comm = FHSSPrionSerialComm()
 
     def get_nic_data_from_terminal(self, data_type):
         if data_type == "mac_address":

@@ -13,6 +13,7 @@ class FHSSPrionSerialComm(SerialComm):
         self.name = device_name
         self.character_delay_ms = 0 # legacy code
         super().__init__(log, com_port, baudrate, terminator, timeout)
+        self.communications_check()
 
 
     def communications_check(self):
@@ -158,4 +159,4 @@ class FHSSPrionSerialComm(SerialComm):
 # unit-test
 if __name__ == '__main__':
     dummy_log = DummyLogger()
-    ser = FHSSPrionSerialComm(dummy_log, "Generic", "COM6")
+    ser = FHSSPrionSerialComm(dummy_log, "Generic", "COM5")

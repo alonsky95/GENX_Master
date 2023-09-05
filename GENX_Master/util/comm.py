@@ -1,15 +1,14 @@
 ## comm.py is a concrete class that specifies the Comm module for facilitating communication
 # should allow for unittesting of communication link
 
-from logger import Log
-from abc import ABC, abstractmethod
+from .logger import Log
+from abc import abstractmethod
 
-class Comm(ABC):
+class Comm:
     def __init__(self, log: Log):
         self.log = log
         self.command_history = [] # history of commands issued
         self.open()
-        self.communications_check()
 
 
     @abstractmethod
@@ -32,10 +31,6 @@ class Comm(ABC):
         """ Helper function to be used by write_set() and write_get() """
         pass
 
-    @abstractmethod
-    def _write(self, command, character_delay_ms=0):
-        """ Helper function to be used by write_set() and write_get() """
-        pass
 
     @abstractmethod
     def write_set(self, command_list, extra_read_time_ms=5):

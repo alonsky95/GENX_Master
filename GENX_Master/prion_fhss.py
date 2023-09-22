@@ -1,12 +1,40 @@
 ## prion_fhss.py is a concrete class that specifies the Prion which implements the Nic interface
 # this encapsulates the FHSS commands to conform to the Nic interface
 
+import re
+import sys
 from nic import Nic
 from GENX_Master.util.comm_serial_prion_fhss import FHSSPrionSerialComm
+from GENX_Master.util.logger import Log
 
 class PrionFHSS(Nic):
-    def __init__(self):
-        _comm = FHSSPrionSerialComm()
+    def __init__(self, log: Log, comm: FHSSPrionSerialComm):
+        self.log = log
+        self._comm = comm
+
+    def _query_properties():
+        pass
+
+    def connect():
+        pass
+    
+    def get_mode():
+        pass
+    
+    def get_properties():
+        pass
+    
+    def init_properties():
+        pass
+    
+    def receive_packets():
+        pass
+    
+    def transmit_cw():
+        pass
+    
+    def transmit_packets():
+        pass
 
     def get_nic_data_from_terminal(self, data_type):
         if data_type == "mac_address":
@@ -75,7 +103,7 @@ class PrionFHSS(Nic):
 
 
     def get_wan_type(self):
-        wan_type = self.write_get('atflxa 0x3000C 1?',extra_read_time_ms=2000)
+        wan_type = self._comm.write_get('atflxa 0x3000C 1?',extra_read_time_ms=2000)
         print(wan_type,type(wan_type))
         if wan_type['response'] == '0x24':
             print('NA1')
@@ -90,7 +118,7 @@ class PrionFHSS(Nic):
 
     def get_architecture(self):
         #we don't change the cpuclk on ARM products, so if 'atcpuclk' is in 'at?', then it is akio
-        self.write('at?')
+        self._comm.write('at?')
         at_command_options = self.read_buffer(extra_read_time_ms=100)
         #selfprint at_command_options
         if 'atcpuclk' in at_command_options:
@@ -159,7 +187,7 @@ class PrionFHSS(Nic):
         #loop through registers
         for i in range(min_int, max_int + 1):
             word = command + ' ' + hex(i) +  num_bytes + '?'
-            nic_response = self.write_get(word)['response']
+            nic_response = self._comm.write_get(word)['response']
             self.log.info(nic_response)
             out_str.append(nic_response['command'])
             out_str.append(' : ')
@@ -176,7 +204,7 @@ class PrionFHSS(Nic):
 
     def get_mac_address(self):
         #returns the MAC address
-        tmp = self.write_get('atflxa 0x30000 8?')
+        tmp = self._comm.write_get('atflxa 0x30000 8?')
         #print tmp
         if tmp['response'].count('0xFF') == 8: 
             return None
@@ -203,12 +231,12 @@ class PrionFHSS(Nic):
         replace_string = r"0x\1 "
         hex_values = re.sub(regex, replace_string, mac_address)
         hex_values = hex_values[:len(hex_values)-1]
-        return self.write_set('atflxa 0x30000 8=' + hex_values)    
+        return self._comm.write_set('atflxa 0x30000 8=' + hex_values)    
  
 
     def get_cpu_clock(self):
         #returns the cpu_clock address
-        tmp = self.write_get('atflxa 0x30082 4?')
+        tmp = self._comm.write_get('atflxa 0x30082 4?')
         #print tmp
         if tmp['response'].count('0xFF') == 4: 
             return None
@@ -229,13 +257,13 @@ class PrionFHSS(Nic):
     def set_cpu_clock(self, cpu_clock):
         #writes a cpu_clock address to flash. cpu_clock is a 16-character string represent
         if cpu_clock == '26000000':
-            return self.write_set('atflxa 0x30082 4=0x1 0x8c 0xba 0x80')
+            return self._comm.write_set('atflxa 0x30082 4=0x1 0x8c 0xba 0x80')
         elif cpu_clock == '19200000':
-            return self.write_set('atflxa 0x30082 4=0x1 0x24 0xf8 0x00')
+            return self._comm.write_set('atflxa 0x30082 4=0x1 0x24 0xf8 0x00')
         
 
     def get_device_type(self):
-        raw_part_number = self.write_get('atflxa 0x30008 1?')['response']
+        raw_part_number = self._comm.write_get('atflxa 0x30008 1?')['response']
         if raw_part_number.count('0xFF') == 1: 
             return None
         else:
@@ -244,11 +272,11 @@ class PrionFHSS(Nic):
 
     def set_device_type(self, device_type):
         self.device_type = str(device_type)
-        return self.write_set('atflxa 0x30008 1=' + str(device_type))
+        return self._comm.write_set('atflxa 0x30008 1=' + str(device_type))
     
 
     def get_stuffing_options(self):
-        stuffing_options = self.write_get('atflxa 0x30030 8?')['response']
+        stuffing_options = self._comm.write_get('atflxa 0x30030 8?')['response']
         if stuffing_options.count('0xFF') == 8: 
             return None
         else:
@@ -256,7 +284,7 @@ class PrionFHSS(Nic):
         
 
     def get_rf_info(self):
-        return self.write_get('at~rf?')['response']
+        return self._comm.write_get('at~rf?')['response']
         
 
     def set_stuffing_options(self, stuffing_options):
@@ -278,7 +306,7 @@ class PrionFHSS(Nic):
                 
         #print [stuffing_options_set_string]    
         
-        return self.write_set('atflxa 0x30030 8=' + stuffing_options_set_string)
+        return self._comm.write_set('atflxa 0x30030 8=' + stuffing_options_set_string)
      
 
     def get_running_firmware(self):
@@ -294,7 +322,7 @@ class PrionFHSS(Nic):
         #going to check 0x20008 first because it is most likely to be an unprogrammed bit of memory if 
         #2/4/8MB flash because sysvars shouldn't fill up that location
         for address in ['0x4e0108', '0x4008']:
-            tmp = self.write_get('atflxa '+ address +' 4?', extra_read_time_ms=400)
+            tmp = self._comm.write_get('atflxa '+ address +' 4?', extra_read_time_ms=400)
             
             #we want to check to see if all 0xFF (unprogrammed flash)
             if tmp['response'].count('0xFF') != 4:
@@ -323,7 +351,7 @@ class PrionFHSS(Nic):
         #reg_length is the integer length of bytes
         
         #returns arena product number
-        tmp = self.write_get('atflxa ' + str(reg_offset) + ' ' + str(reg_length) + '?', extra_read_time_ms=200)
+        tmp = self._comm.write_get('atflxa ' + str(reg_offset) + ' ' + str(reg_length) + '?', extra_read_time_ms=200)
         
         #strip out the whitespace
         array3 = re.split(' ', tmp['response'])
@@ -349,13 +377,13 @@ class PrionFHSS(Nic):
         
         #assuming that the arena PN has been programmed as this is check on initial connection.
                
-        raw_part_number = self.write_get('atflxa 0x3000D 10?', extra_read_time_ms=2000)['response']
+        raw_part_number = self._comm.write_get('atflxa 0x3000D 10?', extra_read_time_ms=2000)['response']
         #print raw_part_number
         if raw_part_number.count('0xFF') == 3: 
             #this location hasn't been programmend, then it's going to be the new method
             #so easiest way is to get these two bytes again
-            first_place = self.write_get('atflxa 0x3000D 7?')['response']
-            second_place = self.write_get('atflxa 0x30042 4?')['response']
+            first_place = self._comm.write_get('atflxa 0x3000D 7?')['response']
+            second_place = self._comm.write_get('atflxa 0x30042 4?')['response']
             raw_part_number = first_place + ' ' + second_place
         
         #now need to return none if raw_part_number is full of f's going to be 10 or ll bytes, so > 9
@@ -411,7 +439,7 @@ class PrionFHSS(Nic):
                 part_number_string = part_number_string[1:]
             command = command[:-1]# to pop off the last bit of whitespace      
             self.log.debug('Command is : ' + command)
-            self.write_set(command)
+            self._comm.write_set(command)
         
         elif len(part_number_string) == 11:
             command = 'atflxa 0x3000D 7='
@@ -420,7 +448,7 @@ class PrionFHSS(Nic):
                 part_number_string = part_number_string[1:]
             command = command[:-1]# to pop off the last bit of whitespace       
             self.log.debug('Command is : ' + command)
-            self.write_set(command)
+            self._comm.write_set(command)
                
             command = 'atflxa 0x30042 2='
             for i in range(2):
@@ -428,7 +456,7 @@ class PrionFHSS(Nic):
                 part_number_string = part_number_string[1:]
             command = command[:-1]# to pop off the last bit of whitespace
             self.log.debug('Command is : ' + command)
-            self.write_set(command)
+            self._comm.write_set(command)
             
             command = 'atflxa 0x30044 2='
             for i in range(2):
@@ -436,13 +464,13 @@ class PrionFHSS(Nic):
                 part_number_string = part_number_string[1:]
             command = command[:-1]# to pop off the last bit of whitespace
             self.log.debug('Command is : ' + command)
-            self.write_set(command)    
+            self._comm.write_set(command)    
         
         return 'Ok'
         
 
     def get_hardware_version(self):
-        tmp = self.write_get('atflxa 0x30009 2?')
+        tmp = self._comm.write_get('atflxa 0x30009 2?')
         if tmp['response'].count('0xFF') == 2: 
             return None
         else:
@@ -469,7 +497,7 @@ class PrionFHSS(Nic):
             split_input = re.split('\.', hardware_version_sting)
             command = command + hex(int(split_input[1])) + ' ' + hex(int(split_input[0]))
         
-        return self.write_set(command)
+        return self._comm.write_set(command)
     
 
     def get_disease_name_and_voltage(self):
@@ -509,84 +537,84 @@ class PrionFHSS(Nic):
         
 
     def get_frame_length(self):
-        return self.write_get('ats100?')['response']
+        return self._comm.write_get('ats100?')['response']
     
 
     def set_frame_length(self, value):
-        return self.write_set(['ats100=', str(value)])        
+        return self._comm.write_set(['ats100=', str(value)])        
     
 
     def get_number_frames(self):
-        return self.write_get('ats101?')['response']
+        return self._comm.write_get('ats101?')['response']
 
 
     def set_number_frames(self, value):
-        return self.write_set(['ats101=', str(value)])
+        return self._comm.write_set(['ats101=', str(value)])
     
 
     def get_frame_gap(self):
-        return self.write_get('ats102?')['response']
+        return self._comm.write_get('ats102?')['response']
     
 
     def set_frame_gap(self, value):
-        return self.write_set(['ats102=', str(value)])
+        return self._comm.write_set(['ats102=', str(value)])
     
 
     def set_tx_pattern_start(self, value):
-        return self.write_set(['ats103=', str(value)])
+        return self._comm.write_set(['ats103=', str(value)])
     
 
     def get_tx_pattern_start(self):
-        return self.write_get('ats103?')['response']
+        return self._comm.write_get('ats103?')['response']
     
 
     def get_tx_pattern_end(self):
-        return self.write_get('ats104?')['response']
+        return self._comm.write_get('ats104?')['response']
     
 
     def get_tx_pattern_step(self):
-        return self.write_get('ats105?')['response']
+        return self._comm.write_get('ats105?')['response']
     
 
     def set_tx_mode(self, mode):
-        return self.write_set(['ats106=', str(mode)])
+        return self._comm.write_set(['ats106=', str(mode)])
     
 
     def get_tx_mode(self):
-        return self.write_get('ats106?')['response']
+        return self._comm.write_get('ats106?')['response']
     
 
     def set_channel(self, channel):
-        return self.write_set(['ats107=', str(channel)])
+        return self._comm.write_set(['ats107=', str(channel)])
 
 
     def get_channel(self):
         #returns the channel number 
-        return self.write_get('ats107?')['response']
+        return self._comm.write_get('ats107?')['response']
       
 
     def set_preamble_char(self, preamble):
-        return self.write_set('ats108=' + str(preamble))
+        return self._comm.write_set('ats108=' + str(preamble))
     
 
     def get_preamble_char(self):
-        return self.write_get('ats108?')['response']
+        return self._comm.write_get('ats108?')['response']
     
 
     def set_preamble_length(self, preamble_length):
-        return self.write_set('ats109=' + str(preamble_length))
+        return self._comm.write_set('ats109=' + str(preamble_length))
     
 
     def get_preamble_length(self):
-        return self.write_get('ats109?')['response']
+        return self._comm.write_get('ats109?')['response']
     
 
     def set_channel_id(self, channel):
-        return self.write_set('ats110=' + channel)
+        return self._comm.write_set('ats110=' + channel)
     
 
     def get_channel_id(self):
-        return self.write_get('ats110?')['response']
+        return self._comm.write_get('ats110?')['response']
         
 
     def set_modulation(self, modulation):
@@ -599,7 +627,7 @@ class PrionFHSS(Nic):
             mod = 3
         elif modulation == 'QPSK':
             mod = 4     
-        #return self.write_set(['ats111=', str(mod)]) 
+        #return self._comm.write_set(['ats111=', str(mod)]) 
     
 
     def set_option(self,option):
@@ -611,36 +639,36 @@ class PrionFHSS(Nic):
             opt=281        
         elif option == 4:
             opt=156
-        #return self.write_set(['ats131=',str(opt)])  
+        #return self._comm.write_set(['ats131=',str(opt)])  
          
 
     def set_phy_mode(self,phy_mode):
-        s = self.write_set(['ats121=', str(phy_mode)])
-        #self.write('attest=1')
-       # self.write('attest=0')
+        s = self._comm.write_set(['ats121=', str(phy_mode)])
+        #self._comm.write('attest=1')
+       # self._comm.write('attest=0')
         return s   
           
 
     def get_modulation(self):
-        return self.write_get('ats111?')['response']
+        return self._comm.write_get('ats111?')['response']
         
 
     def set_power_level(self, level):
-        return self.write_set(['ats112=', str(level)])
+        return self._comm.write_set(['ats112=', str(level)])
     
 
     def get_power_level(self):
-        return self.write_get('ats112?')['response']
+        return self._comm.write_get('ats112?')['response']
     
 
     def set_channel_spacing(self, spacing):
-        s = self.write_set(['ats113=', str(spacing)])
+        s = self._comm.write_set(['ats113=', str(spacing)])
         self.channel_spacing = self.get_channel_spacing()   # set an instance variable to avoid having to do a serial read
         return s
     
 
     def get_channel_spacing(self):
-        return float(self.write_get('ats113?')['response'])#*1000 this has to be fixed sergio #to put in Hz
+        return float(self._comm.write_get('ats113?')['response'])#*1000 this has to be fixed sergio #to put in Hz
         
 
     def set_datarate(self, rate_in_bps):
@@ -648,7 +676,7 @@ class PrionFHSS(Nic):
         #because we used to set datarate in kbps not bps
         if int(self.nic_data['running_firmware'][:2]) < 83:
             rate_in_bps = rate_in_bps
-        return_status = self.write_set(['ats114=', str(rate_in_bps)])
+        return_status = self._comm.write_set(['ats114=', str(rate_in_bps)])
      
         #now need to also set frequency deviation as this is no longer changed in custom phy modes
         if int(rate_in_bps) in list(frequency_deviation_table.keys()):
@@ -663,19 +691,19 @@ class PrionFHSS(Nic):
         
 
     def get_datarate(self):
-        return self.write_get('ats114?')['response']
+        return self._comm.write_get('ats114?')['response']
     
 
     def get_rf_xcvr(self):
-        return self.write_get('ats115?')['response']    
+        return self._comm.write_get('ats115?')['response']    
 
 
     def set_sysvar(self, sysvar, value):
-        self.write_set('atsysvar %d 1=%d' % (sysvar, value))
+        self._comm.write_set('atsysvar %d 1=%d' % (sysvar, value))
     
 
     def get_sysvar(self, sysvar):
-        return self.write_get('atsysvar %d?' % sysvar)['response']
+        return self._comm.write_get('atsysvar %d?' % sysvar)['response']
 
 
     def disable_overtemp_patch(self):
@@ -686,7 +714,7 @@ class PrionFHSS(Nic):
         out_data = []
         for i in range(100, 119, 1):
             word = 'ats' + str(i) + '?'
-            out_data.append([word , self.write_get(word)['response']])
+            out_data.append([word , self._comm.write_get(word)['response']])
         #print out_data
         out_data.append(['firmware', self.get_firmware(self.running_firmware_pointer)])
         out_data.append(['start word', self.get_start_word()])
@@ -694,39 +722,39 @@ class PrionFHSS(Nic):
     
 
     def set_start_word(self, start_word):
-        return self.write_set(['ats117=', str(start_word)])        
+        return self._comm.write_set(['ats117=', str(start_word)])        
         
 
     def get_start_word(self):
-        return self.write_get('atmfe 17?')['response']
+        return self._comm.write_get('atmfe 17?')['response']
     
 
     def set_itron_serial_number(self, serial):
         # for communicating with Itron NICs(newer fw ~3.1.x)
-        self.write_set('ats119=' + str(serial))
+        self._comm.write_set('ats119=' + str(serial))
     
 
     def idle(self):
         if self.cell_status in ('idle', 'transmitting'):
-            self.write_set('atwan--') #make sure we are disconnected from cell modem
-        return self.write_set('attest=0')
+            self._comm.write_set('atwan--') #make sure we are disconnected from cell modem
+        return self._comm.write_set('attest=0')
     
 
     def transmit(self):
         self.time_of_last_transmit = time.time()
-        #self.write_set('attest=0')       # do we still need this?
+        #self._comm.write_set('attest=0')       # do we still need this?
         if self.attest_mode == 'normal':        
-#            self.write_set('attest=15')\
-            #self.write_set('atmx 0x212=0x80')
-            #self.write_set('atmx 0x212?')
-            return self.write_set('attest=1')
+#            self._comm.write_set('attest=15')\
+            #self._comm.write_set('atmx 0x212=0x80')
+            #self._comm.write_set('atmx 0x212?')
+            return self._comm.write_set('attest=1')
         elif self.attest_mode == 'slc':
-            return self.write_set('attest=6')
+            return self._comm.write_set('attest=6')
         
 
     def transmit_dual(self):
         self.time_of_last_transmit = time.time()
-        return self.write_set('attest=13')
+        return self._comm.write_set('attest=13')
 
 
     def set_cell_status(self, status):
@@ -739,23 +767,23 @@ class PrionFHSS(Nic):
 
     def activate_cell_mode(self, mode):
         if mode == 'transmitting':
-            self.write_set('AT+WPOW=1,128,5', extra_read_time_ms=1000) #$2C maps to ',' as a string
+            self._comm.write_set('AT+WPOW=1,128,5', extra_read_time_ms=1000) #$2C maps to ',' as a string
         elif mode == 'idle':
-            self.write_set('AT+WPOW=2', extra_read_time_ms=1000)
+            self._comm.write_set('AT+WPOW=2', extra_read_time_ms=1000)
 
 
     def receive(self):
-        #self.write_set('attest=0')    # do we still need this?
+        #self._comm.write_set('attest=0')    # do we still need this?
         if self.attest_mode == 'normal':  
-            self.write_set('atxy')
-            #self.write_set('atmx 0x212=0x80')
-            #self.write_set('atmx 0x212?')      
-            return self.write_set('attest=2')
+            self._comm.write_set('atxy')
+            #self._comm.write_set('atmx 0x212=0x80')
+            #self._comm.write_set('atmx 0x212?')      
+            return self._comm.write_set('attest=2')
         elif self.attest_mode == 'slc':
-            return self.write_set('attest=9')
+            return self._comm.write_set('attest=9')
         
         if self.cell_status != 'off':
-            self.write_set('atwan##', extra_read_time_ms=5000) #needs a long time to initialize
+            self._comm.write_set('atwan##', extra_read_time_ms=5000) #needs a long time to initialize
             if self.cell_status == 'transmitting':
                 self.activate_cell_mode(self.cell_status)
             elif self.cell_status == 'idle':
@@ -769,7 +797,7 @@ class PrionFHSS(Nic):
         Note you must continually read the buffer after issuing this command
         to obtain the results.
         Test does not stop until power cycle."""
-        self.write('atorture=%s' % (memory_type))
+        self._comm.write('atorture=%s' % (memory_type))
 
 
     def ddr_memory_torture(self, memory_type):
@@ -781,26 +809,26 @@ class PrionFHSS(Nic):
         Test does not stop until power cycle."""
         if memory_type == 'ddr-k:0x40a00000:0x40c00000:2:0:100':
             print("slow test wait 25secs")
-            return self.write_get('atorture=%s' % (memory_type),25000)
+            return self._comm.write_get('atorture=%s' % (memory_type),25000)
         elif memory_type == 'ddr-k:0x40a00000:0x40c00000:5:0:100':
             print("slow test wait 25secs")
-            return self.write_get('atorture=%s' % (memory_type),25000)
+            return self._comm.write_get('atorture=%s' % (memory_type),25000)
         elif memory_type == 'ddr-k:0x40a00000:0x40c00000:3:0:100':
             print("slow test wait 10secs")
-            return self.write_get('atorture=%s' % (memory_type),12000)        
+            return self._comm.write_get('atorture=%s' % (memory_type),12000)        
         else:
             print("test wait 6secs")
-            return self.write_get('atorture=%s' % (memory_type),6000)
+            return self._comm.write_get('atorture=%s' % (memory_type),6000)
         
        
         
 
 
     def get_phy_stats(self):
-        return self.write_get('at~phy?')['response']
+        return self._comm.write_get('at~phy?')['response']
     
     def reset_phy_stats(self):
-        return self.write_set('at~phy=0')
+        return self._comm.write_set('at~phy=0')
         
     def parse_phy_stats(self, phy_stats, value):
         #sometimes you just want to parse the statsf
@@ -831,25 +859,25 @@ class PrionFHSS(Nic):
         return self.get_phy_value('received frames')        
     
     def get_crypto_key(self, key_number):
-        return self.write_get('atcrypto ECCK' + str(key_number) + ' MUL?')['response']
+        return self._comm.write_get('atcrypto ECCK' + str(key_number) + ' MUL?')['response']
     
     def set_country_code(self, country_code):
-        self.write('atcc=' + str(country_code))
+        self._comm.write('atcc=' + str(country_code))
     
     def get_country_code(self):
-        return self.write_get('atcc?')['response']
+        return self._comm.write_get('atcc?')['response']
     
     def set_dac0(self, dac0_setting):
-        self.write_set('atdac0=' + str(dac0_setting))
+        self._comm.write_set('atdac0=' + str(dac0_setting))
     
     def get_dac0(self):
-        return self.write_get('atdac0?')['respnose']
+        return self._comm.write_get('atdac0?')['respnose']
     
     def get_frequency_zero(self):
-        return self.write_get('ats123?')['response']
+        return self._comm.write_get('ats123?')['response']
     
     def set_frequency_zero(self, frequency_zero):
-        return self.write_set('ats123='+ str(frequency_zero))
+        return self._comm.write_set('ats123='+ str(frequency_zero))
        
     
     def power_cycle(self):
@@ -862,12 +890,12 @@ class PrionFHSS(Nic):
         
         if self.power_supply is None:
             self.log.info('No power supply connected to nic, power-cycle manually') 
-            self.write_set('atrestart')
+            self._comm.write_set('atrestart')
             self.time_of_power_cycle = time.time()
             time.sleep(waiting_time)#wait for device to wakeup  
         else:
             if  self.power_supply.power_supply.__class__.__name__ ==  'DummyPinSupply':
-                self.write_set('atrestart') 
+                self._comm.write_set('atrestart') 
                 time.sleep(waiting_time)#wait for device to wakeup                 
             self.log.info('Power-cycling NIC: ' + self.name)
             self.power_supply.power_cycle()
@@ -876,10 +904,10 @@ class PrionFHSS(Nic):
         self.communications_check()        ### Default value for wait after it power cycles is 5 seconds
     
     def set_frequency_deviation(self, deviation):
-        return self.write_set('ats130='+ str(deviation))
+        return self._comm.write_set('ats130='+ str(deviation))
     
     def get_frequency_deviation(self):
-        return self.write_get('ats130?')['response']
+        return self._comm.write_get('ats130?')['response']
         
     def set_atmx_register(self, register, value, value_base=16, value_length_in_bits=8, offset=0, register_length_in_bits=8):    
     #writes to ATMX register and then commits to BBRAM
@@ -890,7 +918,7 @@ class PrionFHSS(Nic):
         else:
             #get current register setting
             command = 'atmx ' + str(register) + '?'
-            reg_initial_setting = int(self.write_get(command)['response'], 16)#converts to hex
+            reg_initial_setting = int(self._comm.write_get(command)['response'], 16)#converts to hex
             
             #mask out the current values from that offset
             #three steps to this algorithm
@@ -913,10 +941,10 @@ class PrionFHSS(Nic):
         
         #write in the new register value
         command = 'atmx ' + str(register) + '=' + hex_new_register_setting     
-        self.write_set(command)
+        self._comm.write_set(command)
         
         #commit the write to bbram
-        return self.write_set('atbbram')    
+        return self._comm.write_set('atbbram')    
     
     def set_antenna(self, antenna_status):     
         """antenna is either 'external' or 'internal'
@@ -934,51 +962,51 @@ class PrionFHSS(Nic):
 #            if use_atmemw:
 #                if self.nic_data['disease_name'] == 'WestNile_Zoonosis':
 #                    #sets for 900MHz
-#                    self.write_set("atmemw 0xefffa010 1=0x4000")
-#                    self.write_set("atmemw 0xefffa01C 1=0x4000")
+#                    self._comm.write_set("atmemw 0xefffa010 1=0x4000")
+#                    self._comm.write_set("atmemw 0xefffa01C 1=0x4000")
 #                else:
 #                    self.log.error('Please define atmemw commands for ' + self.nic_data['disease_name'])
 #            else:
-                self.write_set('atant=3')
+                self._comm.write_set('atant=3')
                 
         elif antenna_status == 'internal':
 #            if use_atmemw:
 #                if self.nic_data['disease_name'] == 'WestNile_Zoonosis':
 #                    #sets for 900MHz
-#                    self.write_set("atmemw 0xefffa010 1=0x4000")
-#                    self.write_set("atmemw 0xefffa018 1=0x4000 ")
+#                    self._comm.write_set("atmemw 0xefffa010 1=0x4000")
+#                    self._comm.write_set("atmemw 0xefffa018 1=0x4000 ")
 #                else:
 #                    self.log.error('Please define atmemw commands for ' + self.nic_data['disease_name'])
 #            else:
-                self.write_set('atant=0')
+                self._comm.write_set('atant=0')
    
     def initialize(self):
         self.log.info('Initializing NIC: ' + self.name)
-        self.write_set('atv2')
-        self.write_set('atstuff 8=' + self.nic_data['stuffing_options'])       
+        self._comm.write_set('atv2')
+        self._comm.write_set('atstuff 8=' + self.nic_data['stuffing_options'])       
         wan_type = self.get_wan_type()
 #         if wan_type == 'NAG':#is a cellbrea
-#             self.write_set('atwan=0x25') # for Gen5 it is same as 2G
-# #            self.write_set('atwan=0x20') #will take 10seconds to respond
+#             self._comm.write_set('atwan=0x25') # for Gen5 it is same as 2G
+# #            self._comm.write_set('atwan=0x20') #will take 10seconds to respond
 #         elif wan_type == 'NA1':#is a cellbrea
-#             self.write_set('atwan=0x24') #will take 10seconds to respond
+#             self._comm.write_set('atwan=0x24') #will take 10seconds to respond
 #         elif wan_type == 'SV1':#is a cellbrea
-#             self.write_set('atwan=0x26') #will take 10seconds to respond 
+#             self._comm.write_set('atwan=0x26') #will take 10seconds to respond 
 #             
-        self.write_set(('ath=' + str(self.nic_data['hardware_version'])))
-        self.write_set('atx0')
+        self._comm.write_set(('ath=' + str(self.nic_data['hardware_version'])))
+        self._comm.write_set('atx0')
         
-#        self.write_set('ats120=0xff')
+#        self._comm.write_set('ats120=0xff')
 #        if self.phy_mode:
-#            self.write_set('ats121=' + str(self.phy_mode))
+#            self._comm.write_set('ats121=' + str(self.phy_mode))
 #        else:
-#            self.write_set('ats121=0xff') #for custom phy-mode
+#            self._comm.write_set('ats121=0xff') #for custom phy-mode
         
         # required sometimes when transmitting 2.4HAN
 #        self.set_tx_pattern_start(255)
 
         if self.attest_mode=='slc':
-            self.write_set('ats118=4')
+            self._comm.write_set('ats118=4')
     
         if self.antenna:
              self.set_antenna(self.antenna)
@@ -986,86 +1014,86 @@ class PrionFHSS(Nic):
         if self.country_code:
             self.set_country_code(self.country_code)
         #for custom setup functions
-       # self.write_set('ats123=865100000')
-#        self.write_set('atmx 0x12d=0x4e') #disable temp patch
-#        self.write_set('atmx 0x12e=0x20')
+       # self._comm.write_set('ats123=865100000')
+#        self._comm.write_set('atmx 0x12d=0x4e') #disable temp patch
+#        self._comm.write_set('atmx 0x12e=0x20')
         
 #         if self.get_wan_type() == 'NAG':#is a cellbrea
 #             print" Enter 2G to enter atwan##"
-#             self.write_set('atwan##') #will take 10seconds to respond
+#             self._comm.write_set('atwan##') #will take 10seconds to respond
 #             time.sleep(25)#wait for xcvr to initialize
-#             self.write_set('atwan--') #will take 10seconds to respond
+#             self._comm.write_set('atwan--') #will take 10seconds to respond
 #             
         
     def _initialize_863MHz(self):
-        self.write_set('atx0')
-        #self.write_set('atx3') #5/27/2015 Jason King: Doing both atx0 and atx3 is causing issues on first transmission. Include again later.
+        self._comm.write_set('atx0')
+        #self._comm.write_set('atx3') #5/27/2015 Jason King: Doing both atx0 and atx3 is causing issues on first transmission. Include again later.
         time.sleep(3)#wait for xcvr to initialize
-        self.write_set('ats115=0')
-        self.write_set('atDAC0=750')
-        self.write_set('ats112=15')
-        self.write('ats123=863100000')  
+        self._comm.write_set('ats115=0')
+        self._comm.write_set('atDAC0=750')
+        self._comm.write_set('ats112=15')
+        self._comm.write('ats123=863100000')  
         
     def _initialize_865MHz(self):
-        self.write_set('atx0')
-        #self.write_set('atx3') #5/27/2015 Jason King: Doing both atx0 and atx3 is causing issues on first transmission. Include again later.
+        self._comm.write_set('atx0')
+        #self._comm.write_set('atx3') #5/27/2015 Jason King: Doing both atx0 and atx3 is causing issues on first transmission. Include again later.
         time.sleep(3)#wait for xcvr to initialize
-        self.write_set('ats115=0')
-        self.write_set('atDAC0=750')
-        self.write_set('ats112=15')
-        self.write('ats123=865100000')
+        self._comm.write_set('ats115=0')
+        self._comm.write_set('atDAC0=750')
+        self._comm.write_set('ats112=15')
+        self._comm.write('ats123=865100000')
         
     def _initialize_870mhz_fhss(self):
         self._initialize_900MHz()
         
     def _initialize_870MHz(self):
-        self.write_set('atx0')
-        #self.write_set('atx3') #5/27/2015 Jason King: Doing both atx0 and atx3 is causing issues on first transmission. Include again later.
+        self._comm.write_set('atx0')
+        #self._comm.write_set('atx3') #5/27/2015 Jason King: Doing both atx0 and atx3 is causing issues on first transmission. Include again later.
         time.sleep(3)#wait for xcvr to initialize
-        self.write_set('ats115=0')
-        self.write_set('atDAC0=750')
-        self.write_set('ats112=15')
-        self.write('ats123=870200000')
+        self._comm.write_set('ats115=0')
+        self._comm.write_set('atDAC0=750')
+        self._comm.write_set('ats112=15')
+        self._comm.write('ats123=870200000')
         
     def _initialize_900mhz_fhss(self):
-        self.write_set('atx0')
+        self._comm.write_set('atx0')
         time.sleep(3)#wait for xcvr to initialize
-        self.write_set('ats115=0')
-        self.write_set('ats112=25')   # different range for GEn5: 0-30
+        self._comm.write_set('ats115=0')
+        self._comm.write_set('ats112=25')   # different range for GEn5: 0-30
         
         
 
-        #self.write_set('ats102=1') #hack for uber
+        #self._comm.write_set('ats102=1') #hack for uber
     def _initialize_900MHz(self):
-        self.write_set('atx0')
-        #self.write_set('atx3') #5/27/2015 Jason King: Doing both atx0 and atx3 is causing issues on first transmission. Include again later.
+        self._comm.write_set('atx0')
+        #self._comm.write_set('atx3') #5/27/2015 Jason King: Doing both atx0 and atx3 is causing issues on first transmission. Include again later.
         time.sleep(3)#wait for xcvr to initialize
-        self.write_set('ats115=0')
-        self.write_set('atDAC0=750')
-        self.write_set('ats112=15')#change this back
+        self._comm.write_set('ats115=0')
+        self._comm.write_set('atDAC0=750')
+        self._comm.write_set('ats112=15')#change this back
         #self.set_frequency_zero(self.frequency_zero)
-#        self.write_set('atorture=ddr-s:50:0:6:9')
-#         self.write_set('atdmac0 0x40000000:0x40900000:8:0x2000')
-#         self.write_set('atdmac1 0x40000000:0x40903000:16:0x3000')
-#         self.write_set('atdmac1 0x40000000:0x40800000:32:0x5000')
+#        self._comm.write_set('atorture=ddr-s:50:0:6:9')
+#         self._comm.write_set('atdmac0 0x40000000:0x40900000:8:0x2000')
+#         self._comm.write_set('atdmac1 0x40000000:0x40903000:16:0x3000')
+#         self._comm.write_set('atdmac1 0x40000000:0x40800000:32:0x5000')
 
         
         
         
     def _initialize_2400MHz(self):
-        #self.write_set('atx0')
-        self.write_set('atx3')
+        #self._comm.write_set('atx0')
+        self._comm.write_set('atx3')
         time.sleep(3)#wait for xcvr to initialize
-        self.write_set('ats115=3') 
-        self.write_set('ats112=15')
+        self._comm.write_set('ats115=3') 
+        self._comm.write_set('ats112=15')
         
              
     def _initialize_2400mhz_fhss(self):
-        self.write_set('atx0')
-        self.write_set('atx3')
+        self._comm.write_set('atx0')
+        self._comm.write_set('atx3')
         time.sleep(2)#wait for xcvr to initialize
-        self.write_set('ats115=3')
-        self.write_set('ats112=15')
+        self._comm.write_set('ats115=3')
+        self._comm.write_set('ats112=15')
    
                                    
     def _initialize_2400mhz_han(self):
@@ -1081,45 +1109,45 @@ class PrionFHSS(Nic):
         #=======================================================================
         # if self.nic_data['disease_name'] in ['WestNile_Zoonosis', 'Hendra', 'Nipah']:
         #     # 2.4 is initialized slightly differently on WestNile/Zoonosis
-        #     self.write_set('atx0')
-        #     self.write_set('atx1')
+        #     self._comm.write_set('atx0')
+        #     self._comm.write_set('atx1')
         #     time.sleep(2)    #wait for xcvr to initialize
-        #     self.write_set('ats115=1')
-        #     self.write_set('ats112=0')      # 0 is highest level on 2.4HAN WestNile
+        #     self._comm.write_set('ats115=1')
+        #     self._comm.write_set('ats112=0')      # 0 is highest level on 2.4HAN WestNile
         # else:
         #=======================================================================
-        self.write_set('atx0')
-        self.write_set('atx3')  #atx1 no longer works
+        self._comm.write_set('atx0')
+        self._comm.write_set('atx3')  #atx1 no longer works
         time.sleep(2)#wait for xcvr to initialize
-        self.write_set('ats115=1')
-        self.write_set('ats112=15')
+        self._comm.write_set('ats115=1')
+        self._comm.write_set('ats112=15')
         self.set_frame_length(10) #if packet size is too large then won't transmit - not even CW.    
         self.set_channel(18) #need to set the channel to something between 11 and 26.
         #=======================================================================
         # if self.antenna == 'external':
         #     self.set_antenna('external')
-        #     self.write_set('atant=3')
+        #     self._comm.write_set('atant=3')
         #=======================================================================
             
     def _initialize_dual(self):
         #900MHz Init
-        self.write_set('atx3')
+        self._comm.write_set('atx3')
 #        time.sleep(3)#wait for xcvr to initialize
-        self.write_set('ats115=0')
-        self.write_set('ats121=21')
-        self.write_set('ats112=22')
-        self.write_set('ats106=5')
+        self._comm.write_set('ats115=0')
+        self._comm.write_set('ats121=21')
+        self._comm.write_set('ats112=22')
+        self._comm.write_set('ats106=5')
 
         #2400MHz Init
-        self.write_set('ats115=3')
-        self.write_set('ats121=1')
-        self.write_set('ats112=20')
-        self.write_set('ats106=5')
+        self._comm.write_set('ats115=3')
+        self._comm.write_set('ats121=1')
+        self._comm.write_set('ats112=20')
+        self._comm.write_set('ats106=5')
        
         #Switch Back to 900MHz radio for remainder of test.
-        self.write_set('ats115=0')
-        self.write_set('ats121=21')
-        self.write_set('ats106=8')
+        self._comm.write_set('ats115=0')
+        self._comm.write_set('ats121=21')
+        self._comm.write_set('ats106=8')
                              
     def set_mode(self, mode):
         if mode == '863MHz':
@@ -1152,7 +1180,7 @@ class PrionFHSS(Nic):
         
         if self.custom_initialization_commands:
             for command in self.custom_initialization_commands:
-                self.write_set(command)
+                self._comm.write_set(command)
 
     def initialize_dual_running(self, high_band_channel, high_band_channel_spacing, high_band_power_level, high_band_mode, high_band_datarate, high_band_modulation, high_band_phy_mode):
         #init
@@ -1166,21 +1194,38 @@ class PrionFHSS(Nic):
             mod = 4
         
         #900MHz Init
-#        self.write_set('atx3')
+#        self._comm.write_set('atx3')
 #        time.sleep(3) #wait for xcvr to initialize
-#        self.write_set('ats115=0')
-#        self.write_set('atDAC0=750')
-#        self.write_set('ats121=21')
-#        self.write_set('ats112=22')
-#        self.write_set('ats106=8')
+#        self._comm.write_set('ats115=0')
+#        self._comm.write_set('atDAC0=750')
+#        self._comm.write_set('ats121=21')
+#        self._comm.write_set('ats112=22')
+#        self._comm.write_set('ats106=8')
         print(self.get_rf_info())
         #2400MHz Init
         high_band_mode
-        self.write_set('ats115=3')
-        self.write_set('ats112='+str(high_band_power_level))
-        self.write_set('ats113='+str(high_band_channel_spacing))
-        self.write_set('ats107='+str(high_band_channel))
+        self._comm.write_set('ats115=3')
+        self._comm.write_set('ats112='+str(high_band_power_level))
+        self._comm.write_set('ats113='+str(high_band_channel_spacing))
+        self._comm.write_set('ats107='+str(high_band_channel))
 
         
         #Switch Back to 900MHz radio for remainder of test.
-        self.write_set('ats115=0')
+        self._comm.write_set('ats115=0')
+
+if __name__ == '__main__':
+    from GENX_Master.station import Config, Station
+    from GENX_Master.station_device_factory import DeviceConfig, DeviceRole, OpMode, StationDeviceConfig
+    from GENX_Master.test_equipment.test_equipment_factory import TestEquipmentConfig
+    from GENX_Master.util.dummy_logger import DummyLogger
+
+    dummy_equipment_conf = TestEquipmentConfig('power_meter', 'GPIB0::13::INSTR', 'AgilentE4416A')
+    dummy_device_conf = DeviceConfig('Prion', OpMode.FHSS, 115200)
+    dummy_station_device_conf1 = StationDeviceConfig(dummy_device_conf, DeviceRole.REF, 1, 1, 'COM5')
+    dummy_station_device_conf2 = StationDeviceConfig(None, DeviceRole.DUT, 2, 2, 'COM6')
+    dummy_conf = Config([dummy_equipment_conf], [dummy_station_device_conf1, dummy_station_device_conf2])
+    
+    stn = Station(DummyLogger(), dummy_conf, None)
+    duts = stn.init_duts([dummy_device_conf])
+    duts[0].get_mac_address()
+    

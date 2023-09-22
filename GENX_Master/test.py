@@ -3,9 +3,8 @@
 from abc import ABC, abstractmethod
 from testparams import TestParams
 from station import Station
-from device_dut import Dut
+from device import Device
 from util.logger import Log
-from result import Result
 from typing import List
 
 class Test(ABC):
@@ -15,9 +14,14 @@ class Test(ABC):
     # -> perhaps it makes sense to have them where run_sweep() doesn't mess with results_file configuration
     # -> instead, run_power_levels() or equivalent return a json (or other datastruct like result()) to be captured in testbed() <- MUCH BETTER SOC enabling unittest development
 
-    def __init__(self, testparams: TestParams, station: Station, duts: List(Dut), log: Log): # allow for multi-dut <-- SHOULD ALSO VALIDATE IF VOLTAGES TO HIGH FOR DUT, AND IF STATION COMPATIBLE
+    def __init__(self, testparams: TestParams, station: Station, duts: List(Device), log: Log): # allow for multi-dut <-- SHOULD ALSO VALIDATE IF VOLTAGES TO HIGH FOR DUT, AND IF STATION COMPATIBLE
+        self.testparams = testparams
+        self.station = station
+        self.duts = duts
+        self.log = log
         self._validate_station_equipment()
         self._validate_testparams_for_device_compatibility()
+
 
     @abstractmethod
     def _validate_station_equipment(self):
@@ -45,7 +49,7 @@ class Test(ABC):
         pass 
 
     @abstractmethod
-    def run(self) -> List(Result):
+    def run(self) -> List:
         """ Executes the test; Will return a record of Result objects for each dut """
         pass
 

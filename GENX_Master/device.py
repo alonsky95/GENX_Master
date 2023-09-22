@@ -5,7 +5,7 @@ from util.comm import Comm
 from abc import ABC, abstractmethod
 
 class Device(ABC):
-    def __init__(self ,log: Log):
+    def __init__(self ,log: Log, comm: Comm):
         self.connect()
         self.get_properties()
 
@@ -15,7 +15,7 @@ class Device(ABC):
         # 
 
     @abstractmethod
-    def connect(self, comm: Comm):
+    def connect(self):
         """ Initializing the dut requires checking the connection; Should handle exception if fails to establish connection """
         pass
 

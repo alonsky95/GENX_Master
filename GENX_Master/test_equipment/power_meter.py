@@ -7,10 +7,6 @@ class PowerMeter(ABC):
     @abstractmethod
     def set_cal_level(self, level):
         pass
-    
-    @abstractmethod
-    def set_gates(self):
-        pass
        
     @abstractmethod
     def set_frequency(self, freq):

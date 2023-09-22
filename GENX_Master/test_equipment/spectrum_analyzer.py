@@ -2,8 +2,8 @@
 # a spectrum_analyzer can actually serve the role of power_meter and frequency_counter, with additional functionality
 
 from abc import abstractmethod
-from frequency_counter import FrequencyCounter
-from power_meter import PowerMeter
+from GENX_Master.test_equipment.frequency_counter import FrequencyCounter
+from GENX_Master.test_equipment.power_meter import PowerMeter
 
 class SpectrumAnalyzer(FrequencyCounter, PowerMeter):
     @abstractmethod

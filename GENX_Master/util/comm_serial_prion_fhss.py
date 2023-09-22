@@ -1,7 +1,7 @@
-from comm_serial import SerialComm
+from GENX_Master.util.comm_serial import SerialComm
 import re
-from logger import Log
-from dummy_logger import DummyLogger
+from GENX_Master.util.logger import Log
+from GENX_Master.util.dummy_logger import DummyLogger
 
 ## Constants
 DEFAULT_TIMEOUT = 10

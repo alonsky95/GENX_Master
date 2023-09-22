@@ -2,10 +2,10 @@
 # should allow for unittesting of serial communication link
 
 from abc import abstractmethod
-from comm import Comm
+from GENX_Master.util.comm import Comm
 import serial
 import time
-from logger import Log
+from GENX_Master.util.logger import Log
 
 ## Constants
 DEFAULT_TIMEOUT = 10
